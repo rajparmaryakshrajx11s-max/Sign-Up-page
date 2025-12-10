@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Car Shop — Interactive Demo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1230; --accent:#7c3aed; --muted:#94a3b8; --glass: rgba(255,255,255,0.04);
+    }
+    *{box-sizing:border-box;font-family:Inter,system-ui,Arial,sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#071025 0%, #071b2e 60%);color:#e6eef8;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:28px}
+    .app{width:1200px;max-width:100%;display:grid;grid-template-columns:520px 1fr;gap:22px}
+
+    /* LEFT PANEL */
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));padding:18px;border-radius:14px;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#2dd4bf);display:flex;align-items:center;justify-content:center;font-weight:800;color:#031124}
+    h1{font-size:18px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .company-filters{display:flex;gap:8px;margin:16px 0 8px}
+    .company{padding:8px 12px;border-radius:10px;background:var(--glass);cursor:pointer;border:1px solid rgba(255,255,255,0.04);font-weight:600}
+    .company.active{background:linear-gradient(90deg,var(--accent),#06b6d4);color:#021224}
+
+    .model-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .model-card{background:rgba(255,255,255,0.02);padding:10px;border-radius:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.02)}
+    .model-card.selected{outline:2px solid rgba(124,58,237,0.18);box-shadow:inset 0 1px 0 rgba(255,255,255,0.02)}
+    .price{font-weight:700;margin-top:6px}
+
+    .colors{display:flex;gap:8px;margin-top:12px}
+    .swatch{width:34px;height:34px;border-radius:8px;border:2px solid rgba(255,255,255,0.06);cursor:pointer;box-shadow:0 6px 18px rgba(2,6,23,0.5)}
+
+    .cta{display:flex;gap:8px;margin-top:14px}
+    .btn{background:var(--accent);border:none;padding:10px 14px;border-radius:10px;color:#021224;font-weight:700;cursor:pointer}
+    .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+
+    .cart{margin-top:16px;padding:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:12px}
+    .cart h3{margin:0 0 8px 0}
+    .cart-items{display:flex;flex-direction:column;gap:8px}
+    .cart-item{display:flex;justify-content:space-between;align-items:center}
+
+    /* RIGHT PANEL - 3D & Checkout */
+    .stage{position:relative;height:720px;border-radius:14px;overflow:hidden}
+    #canvas-holder{position:absolute;inset:0}
+    .right-ui{position:absolute;right:18px;top:18px;background:rgba(2,6,23,0.6);padding:10px;border-radius:10px}
+    .right-ui .info{font-size:14px}
+
+    .checkout{position:absolute;left:18px;bottom:18px;background:linear-gradient(90deg,#0b1220,rgba(11,18,32,0.6));padding:14px;border-radius:10px;min-width:320px}
+    .checkout label{font-size:13px;color:var(--muted)}
+    .checkout .row{display:flex;gap:8px;margin-top:8px}
+    .checkout input, .checkout select{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:8px;color:inherit}
+
+    /* modal */
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,0.6);display:flex;align-items:center;justify-content:center;z-index:40}
+    .modal .box{background:linear-gradient(180deg,#021124,#041229);padding:18px;border-radius:12px;width:520px}
+    .close{float:right;cursor:pointer}
+
+    /* responsive */
+    @media (max-width:1000px){.app{grid-template-columns:1fr;grid-auto-rows:auto}.stage{height:520px}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <header>
+        <div class="logo">3D</div>
+        <div>
+          <h1>3D Car Shop</h1>
+          <p class="lead">Explore — customize — buy. Real-time 3D preview & flexible payment</p>
+        </div>
+      </header>
+
+      <div>
+        <div class="company-filters" id="companyFilters"></div>
+        <div class="model-list" id="modelList"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+          <div>
+            <div style="font-size:13px;color:var(--muted)">Choose color</div>
+            <div class="colors" id="colorSwatches"></div>
+          </div>
+          <div>
+            <div style="font-size:13px;color:var(--muted)">Quantity</div>
+            <select id="quantity" style="background:transparent;border-radius:8px;padding:8px;margin-left:8px">
+              <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="cta">
+          <button class="btn" id="addToCart">Add to cart</button>
+          <button class="btn ghost" id="viewCart">View cart</button>
+        </div>
+
+        <div class="cart" id="miniCart">
+          <h3>Your cart</h3>
+          <div class="cart-items" id="cartItems"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:700"><div>Total</div><div id="cartTotal">₹0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel stage">
+      <div id="canvas-holder"></div>
+
+      <div class="right-ui">
+        <div class="info" id="selectedInfo">Select a car to preview</div>
+      </div>
+
+      <div class="checkout" id="checkoutBox">
+        <div style="display:flex;justify-content:space-between;align-items:center"><strong id="checkoutTitle">Checkout</strong><small style="color:var(--muted)">Secure</small></div>
+        <div style="margin-top:8px"><label>Payment type</label>
+          <div class="row" style="margin-top:6px">
+            <button class="btn" id="cashBtn">Cash Pay</button>
+            <button class="btn ghost" id="emiBtn">EMI</button>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <label>Select Card</label>
+          <select id="cardSelect" style="width:100%;margin-top:6px">
+            <option value="visa">Visa</option>
+            <option value="mastercard">Mastercard</option>
+            <option value="amex">American Express</option>
+            <option value="rupay">RuPay</option>
+          </select>
+        </div>
+
+        <div style="margin-top:10px">
+          <label>Coupon (optional)</label>
+          <input id="coupon" placeholder="PROMO10" />
+        </div>
+
+        <div style="display:flex;justify-content:space-between;margin-top:12px;align-items:center">
+          <div style="font-weight:700">Grand total</div>
+          <div id="grandTotal">₹0</div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn" id="payNow">Pay now</button>
+          <button class="btn ghost" id="openCart">Open cart</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- modal for cart / emi -->
+  <div id="modal" style="display:none" class="modal" role="dialog">
+    <div class="box">
+      <div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0">Cart & Payment</h2><div class="close" id="closeModal">✕</div></div>
+      <div id="modalBody" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+<script>
+// --- Data ---
+const inventory = {
+  Tata: [
+    {id:'tata-nexon',name:'Nexon EV',price:1350000,colorOptions:['#0f1724','#ffffff','#ef4444','#06b6d4','#fde68a']},
+    {id:'tata-punch',name:'Punch',price:690000,colorOptions:['#0b1220','#0ea5a4','#f97316','#111827','#a78bfa']}
+  ],
+  Maruti: [
+    {id:'maruti-swift',name:'Swift',price:620000,colorOptions:['#ef4444','#111827','#f59e0b','#06b6d4','#10b981']},
+    {id:'maruti-alto',name:'Alto',price:430000,colorOptions:['#111827','#f97316','#60a5fa','#94a3b8','#ec4899']}
+  ],
+  Honda: [
+    {id:'honda-city',name:'City',price:1100000,colorOptions:['#111827','#60a5fa','#06b6d4','#ef4444','#a78bfa']},
+    {id:'honda-civic',name:'Civic',price:2400000,colorOptions:['#111827','#b91c1c','#0ea5a4','#f59e0b','#94a3b8']}
+  ],
+  BMW: [
+    {id:'bmw-3',name:'3 Series',price:4200000,colorOptions:['#000000','#ffffff','#f97316','#06b6d4','#94a3b8']},
+    {id:'bmw-x5',name:'X5',price:7500000,colorOptions:['#000','#a78bfa','#ef4444','#06b6d4','#f59e0b']}
+  ]
+};
+
+let selectedCompany = 'Tata';
+let selectedModel = inventory[selectedCompany][0];
+let selectedColor = selectedModel.colorOptions[0];
+let cart = [];
+
+// --- UI helpers ---
+const companyFilters = document.getElementById('companyFilters');
+const modelList = document.getElementById('modelList');
+const colorSwatches = document.getElementById('colorSwatches');
+const selectedInfo = document.getElementById('selectedInfo');
+const cartItems = document.getElementById('cartItems');
+const cartTotal = document.getElementById('cartTotal');
+const grandTotal = document.getElementById('grandTotal');
+
+function formatINR(x){ return '₹' + x.toLocaleString('en-IN'); }
+
+function renderCompanies(){
+  companyFilters.innerHTML='';
+  Object.keys(inventory).forEach(c =>{
+    const el = document.createElement('div'); el.className='company'+(c===selectedCompany?' active':''); el.textContent=c;
+    el.onclick = ()=>{ selectedCompany=c; renderModels(); renderCompanies(); };
+    companyFilters.appendChild(el);
+  });
+}
+
+function renderModels(){
+  modelList.innerHTML='';
+  inventory[selectedCompany].forEach(model=>{
+    const el = document.createElement('div'); el.className='model-card'+(model.id===selectedModel.id?' selected':'');
+    el.innerHTML = `<div style="font-weight:700">${model.name}</div><div class="price">${formatINR(model.price)}</div>`;
+    el.onclick = ()=>{ selectedModel=model; selectedColor = model.colorOptions[0]; updateSelection(); renderModels(); };
+    modelList.appendChild(el);
+  });
+}
+
+function renderColors(){
+  colorSwatches.innerHTML='';
+  (selectedModel.colorOptions||[]).forEach(c=>{
+    const s=document.createElement('div'); s.className='swatch'; s.style.background=c; if(c===selectedColor) s.style.outline='3px solid rgba(255,255,255,0.06)';
+    s.onclick = ()=>{ selectedColor=c; updateSelection(); renderColors(); };
+    colorSwatches.appendChild(s);
+  });
+}
+
+function updateSelection(){
+  selectedInfo.innerHTML = `<div style="font-weight:700">${selectedModel.name} — ${selectedCompany}</div><div style="color:var(--muted);font-size:13px">Price: ${formatINR(selectedModel.price)}</div>`;
+  // update 3D model color & form
+  if(carBodyMaterial) carBodyMaterial.color = new THREE.Color(selectedColor);
+}
+
+function updateCartUI(){
+  cartItems.innerHTML='';
+  let total=0;
+  cart.forEach((it,idx)=>{
+    const row=document.createElement('div'); row.className='cart-item';
+    row.innerHTML = `<div>${it.name} x${it.qty}</div><div>${formatINR(it.price*it.qty)}</div>`;
+    const rm = document.createElement('button'); rm.textContent='Remove'; rm.style.marginLeft='8px'; rm.onclick = ()=>{ cart.splice(idx,1); updateCartUI(); };
+    row.appendChild(rm);
+    cartItems.appendChild(row);
+    total += it.price*it.qty;
+  });
+  cartTotal.textContent = formatINR(total);
+  grandTotal.textContent = formatINR(total);
+}
+
+// add to cart
+document.getElementById('addToCart').addEventListener('click', ()=>{
+  const qty = parseInt(document.getElementById('quantity').value,10);
+  cart.push({id:selectedModel.id,name:`${selectedModel.name} (${selectedCompany})`,price:selectedModel.price,color:selectedColor,qty});
+  updateCartUI();
+});
+
+document.getElementById('viewCart').addEventListener('click', ()=>openModal());
+document.getElementById('openCart').addEventListener('click', ()=>openModal());
+
+document.getElementById('closeModal').addEventListener('click', ()=>closeModal());
+
+function openModal(){
+  document.getElementById('modal').style.display='flex';
+  const body = document.getElementById('modalBody');
+  if(cart.length===0){ body.innerHTML='<div style="color:var(--muted)">Your cart is empty — add a car to begin.</div>'; return; }
+  let html = '<div style="display:flex;flex-direction:column;gap:8px">';
+  cart.forEach((it,idx)=>{
+    html += `<div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${it.name}</strong><div style=\"color:var(--muted);font-size:13px\">Color:<span style=\"display:inline-block;width:14px;height:14px;margin-left:6px;border-radius:4px;background:${it.color};vertical-align:middle\"></span></div></div><div>${formatINR(it.price*it.qty)}</div></div>`;
+  });
+  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  html += `<div style="margin-top:10px;font-weight:800">Total: ${formatINR(total)}</div>`;
+
+  // payment options
+  html += `<div style="margin-top:10px"><label style=\"color:var(--muted)\">Pay using</label><div style=\"display:flex;gap:8px;margin-top:8px\"><button class=\"btn\" id=\"modalCash\">Cash</button><button class=\"btn ghost\" id=\"modalEmi\">EMI</button></div></div>`;
+
+  html += `<div id=\"emiBox\" style=\"margin-top:12px;display:none\"> <label>Interest rate (annual %)</label><input id=\"interest\" value=\"9.5\" /> <label>Months</label><select id=\"months\"><option>12</option><option>24</option><option>36</option><option>48</option></select> <div style=\"margin-top:8px\"><button class=\"btn\" id=\"calcEmi\">Calculate EMI</button></div> <div id=\"emiResult\" style=\"margin-top:8px;color:var(--muted)\"></div></div>`;
+
+  html += `<div style=\"margin-top:12px\"><label style=\"color:var(--muted)\">Card</label><select id=\"modalCard\"><option>Visa</option><option>Mastercard</option><option>Amex</option><option>RuPay</option></select><div style=\"display:flex;gap:8px;margin-top:8px\"><input placeholder=\"Card number\" id=\"cardNumber\" /><input placeholder=\"Name on card\" id=\"cardName\" /></div><div style=\"margin-top:8px;display:flex;gap:8px\"><button class=\"btn\" id=\"payConfirmed\">Pay ₹${total.toLocaleString('en-IN')}</button></div></div>`;
+
+  html += '</div>';
+  body.innerHTML = html;
+
+  document.getElementById('modalCash').addEventListener('click', ()=>{
+    alert('Cash payment selected. Please visit showroom to complete payment.'); closeModal();
+  });
+  document.getElementById('modalEmi').addEventListener('click', ()=>{
+    document.getElementById('emiBox').style.display='block';
+  });
+  document.getElementById('calcEmi').addEventListener('click', ()=>{
+    const P = total; const r = parseFloat(document.getElementById('interest').value)/100/12; const n = parseInt(document.getElementById('months').value,10);
+    const emi = (P*r*Math.pow(1+r,n))/(Math.pow(1+r,n)-1);
+    document.getElementById('emiResult').textContent = `Monthly EMI: ${formatINR(Math.round(emi))} for ${n} months (interest ${document.getElementById('interest').value}% p.a.)`;
+  });
+
+  document.getElementById('payConfirmed').addEventListener('click', ()=>{
+    alert('Payment simulated — thank you for your purchase!'); cart = []; updateCartUI(); closeModal();
+  });
+}
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+
+// --- 3D scene (Three.js) ---
+const holder = document.getElementById('canvas-holder');
+let scene,camera,renderer,carGroup,carBodyMaterial;
+initThree();
+
+function initThree(){
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(48, holder.clientWidth/holder.clientHeight, 0.1, 1000);
+  camera.position.set(0,2.3,6);
+  renderer = new THREE.WebGLRenderer({antialias:true,alpha:true});
+  renderer.setSize(holder.clientWidth, holder.clientHeight); renderer.setPixelRatio(window.devicePixelRatio);
+  holder.appendChild(renderer.domElement);
+
+  const hemi = new THREE.HemisphereLight(0xffffff,0x444444,0.9); scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff,0.8); dir.position.set(5,10,7); scene.add(dir);
+
+  // ground
+  const groundMat = new THREE.MeshStandardMaterial({color:0x071124,metalness:0.2,roughness:0.8});
+  const g=new THREE.Mesh(new THREE.PlaneGeometry(40,40),groundMat); g.rotation.x=-Math.PI/2; g.position.y=-0.6; scene.add(g);
+
+  carGroup = new THREE.Group(); scene.add(carGroup);
+  buildCar(selectedModel);
+
+  window.addEventListener('resize', onRes);
+  animate();
+}
+
+function buildCar(model){
+  // clear
+  while(carGroup.children.length) carGroup.remove(carGroup.children[0]);
+
+  // body
+  carBodyMaterial = new THREE.MeshStandardMaterial({color: new THREE.Color(selectedColor), metalness:0.5, roughness:0.3});
+  const bodyGeo = new THREE.BoxGeometry(3.2,0.8,1.6);
+  const body = new THREE.Mesh(bodyGeo, carBodyMaterial);
+  body.position.y = 0.4;
+  body.castShadow=true; carGroup.add(body);
+
+  // cabin cut
+  const cabinGeo = new THREE.BoxGeometry(1.6,0.5,1.5);
+  const cabinMat = new THREE.MeshStandardMaterial({color:0x102133,metalness:0.2,roughness:0.35,opacity:0.9,transparent:true});
+  const cabin = new THREE.Mesh(cabinGeo, cabinMat); cabin.position.set(0.2,0.7,0); carGroup.add(cabin);
+
+  // bumpers
+  const bumperGeo = new THREE.BoxGeometry(0.4,0.25,1.6);
+  const bumper = new THREE.Mesh(bumperGeo, new THREE.MeshStandardMaterial({color:0x031124})); bumper.position.set(-1.7,0.25,0); carGroup.add(bumper);
+  const bumper2 = bumper.clone(); bumper2.position.x = 1.7; carGroup.add(bumper2);
+
+  // wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.35,0.35,0.4,24);
+  const wheelMat = new THREE.MeshStandardMaterial({color:0x111111,metalness:0.8,roughness:0.4});
+  for(let i=0;i<4;i++){
+    const w = new THREE.Mesh(wheelGeo, wheelMat); w.rotation.z = Math.PI/2; w.position.y=0.1; w.position.x = i%2?1.1:-1.1; w.position.z = i<2?0.7:-0.7; carGroup.add(w);
+  }
+
+  // scale & position by price (funny unique touch) — more expensive cars sit slightly higher & longer
+  const priceFactor = Math.log(model.price)/12; carGroup.scale.setScalar(0.9 + (priceFactor-4.5)/10);
+  carGroup.position.y = 0;
+}
+
+// simple orbit controls (manual)
+let isDragging=false, previousMousePosition={x:0,y:0};
+holder.addEventListener('pointerdown', (e)=>{ isDragging=true; previousMousePosition={x:e.clientX,y:e.clientY}; });
+holder.addEventListener('pointerup', ()=>{ isDragging=false; });
+holder.addEventListener('pointermove', (e)=>{ if(!isDragging) return; const deltaMove = {x: e.clientX-previousMousePosition.x, y: e.clientY-previousMousePosition.y}; carGroup.rotation.y += deltaMove.x*0.01; carGroup.rotation.x += deltaMove.y*0.005; previousMousePosition={x:e.clientX,y:e.clientY}; });
+
+function animate(){ requestAnimationFrame(animate); carGroup.rotation.y += 0.002; renderer.render(scene,camera); }
+function onRes(){ renderer.setSize(holder.clientWidth, holder.clientHeight); camera.aspect = holder.clientWidth/holder.clientHeight; camera.updateProjectionMatrix(); }
+
+// initial render
+renderCompanies(); renderModels(); renderColors(); updateSelection(); updateCartUI();
+
+// interactive elements
+document.getElementById('emiBtn').addEventListener('click', ()=>{
+  document.getElementById('modal').style.display='flex';
+  document.getElementById('modalBody').innerHTML = '<div style="color:var(--muted)">Open the cart and choose EMI in the payment options.</div>';
+});
+
+document.getElementById('cashBtn').addEventListener('click', ()=>{
+  alert('Cash pay selected — you will be redirected to offline payment options.');
+});
+
+document.getElementById('payNow').addEventListener('click', ()=>{
+  if(cart.length===0){ alert('Your cart is empty. Add a car first.'); return; }
+  openModal();
+});
+
+</script>
+</body>
+</html>
