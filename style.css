@@ -1,90 +1,146 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
-*{
-    padding: 0%;
-    margin: 0%;
-    box-sizing: border-box;
+*{ margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
 }
-body{
-    font-family: "Lato", sans-serif;;
+
+body {
+  background: #f8f9fa;
+  color: #333;
 }
-.outer-box{
-    width: 100vw;
-    height: 100vh;
-    background: linear-gradient(to top left,rgba(2, 187, 184, 0.797),rgb(251, 243, 243));
+
+/* Header */
+header {
+  background: #111;
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 40px;
 }
-.inner-box{
-width: 400px;
-margin: 0 auto;
-position: relative;
-top: 30%;
-transform: translateY(-40%);
-padding: 30px 50px;
-background: linear-gradient(to top left #ffffffff,#ffffff33);
-backdrop-filter: blur(8px);
-border-radius: 20px;
-box-shadow: 2px 2px 5px rgba(36, 35, 35, 0.79);
-z-index: 2;
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
 }
-.signup-header h1{
-font-size: 2.5rem;
-color: #212121;
+.logo span {
+  color: #f9d342;
 }
-.signup-header p{
-    font-size: 0.8rem;
-    color: rgb(72, 72, 72);
+
+nav ul {
+  list-style: none;
+  display: flex;
+  gap: 25px;
 }
-.signup-body{
-    margin: 20px 0;
+
+nav a {
+  color: #fff;
+  text-decoration: none;
+  transition: 0.3s;
 }
-.signup-body p{
-    margin: 10px 0;
+
+nav a:hover {
+  color: #f9d342;
 }
-.signup-body p label{
-display: block;
-font-weight:bold;
+
+/* Hero Section */
+.hero {
+  text-align: center;
+  padding: 100px 20px;
+  background: url('https://thumblr.uniid.it/product/122048/3925264901ee.jpg?width=3840&format=webp&q=75') center/cover no-repeat;
+  color: #fff;
 }
-.signup-body p input{
-    width: 100%;
-    padding: 10px;
-    background-color: rgba(194, 214, 231, 0.578);
-    border-radius: 10px;
-    border: 1px solid  rgba(206, 227, 246, 0.6);
-    font-size: 0.9rem;
-    margin-top: 4px;
+
+.hero h1 {
+  font-size: 48px;
 }
-.signup-body p input[type="submit"]{
-    background-color: #ffffff84;
-    color: black;
-    cursor: pointer;
+
+.hero p {
+  margin: 15px 0;
+  font-size: 18px;
 }
-.signup-body p input[type="submit"]:hover{
-    background-color: rgb(26, 99, 244);
-    color: white;
-    font-size: large;
-    cursor: pointer;
+
+.hero button {
+  background: #f9d342;
+  border: none;
+  padding: 12px 25px;
+  cursor: pointer;
+  font-weight: bold;
+  border-radius: 8px;
+  transition: 0.3s;
 }
-.signup-footer p {
-    color: #555;
-    text-align: center;
+
+.hero button:hover {
+  background: #ffea00;
 }
-.signup-footer p a{
-    color: rgba(16, 169, 16, 0.874);
+
+/* Products */
+.products {
+  padding: 60px 20px;
+  text-align: center;
 }
-.circle{
-    width: 200px;
-    height: 200px;
-    border-radius: 100px;
-    background: linear-gradient(to top right,#ffffff22,#ffffffff);
-    position: absolute;
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 25px;
+  margin-top: 30px;
 }
-.c1{
-    top: 150px;
-    left: 30px;
-    bottom: 30px;
-   
+
+.product-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  transition: 0.3s;
 }
-.c2{
-    top: 300px;
-    right: 20px;
-    bottom:30px;
+
+.product-card:hover {
+  transform: translateY(-5px);
+}
+
+.product-card img {
+  width: 100%;
+  border-radius: 12px;
+}
+
+.product-card h3 {
+  margin: 10px 0;
+}
+
+.product-card button {
+  background: #111;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.product-card button:hover {
+  background: #f9d342;
+  color: #111;
+}
+
+/* Cart */
+.cart {
+  background: #fff;
+  margin: 60px 20px;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+#cart-items {
+  list-style: none;
+  margin: 15px 0;
+}
+
+footer {
+  text-align: center;
+  background: #111;
+  color: #fff;
+  padding: 20px;
+  margin-top: 40px;
 }
